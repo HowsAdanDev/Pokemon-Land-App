@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pokemon Land</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #ffd700;
+            background-image: radial-gradient(#000 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .logo {
+            text-align: center;
+            font-size: 48px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+        @keyframes glow {
+            from {
+                text-shadow: 0 0 5px #ff0000, 0 0 10px #ff0000, 0 0 15px #ff0000, 0 0 20px #ff0000;
+            }
+            to {
+                text-shadow: 0 0 10px #00ff00, 0 0 20px #00ff00, 0 0 30px #00ff00, 0 0 40px #00ff00;
+            }
+        }
+        .search-container {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        #search-input {
+            padding: 10px;
+            font-size: 16px;
+            width: 200px;
+        }
+        #search-button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        #result {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            animation: rgb-border 5s linear infinite;
+        }
+        @keyframes rgb-border {
+            0% { box-shadow: 0 0 0 3px red; }
+            33% { box-shadow: 0 0 0 3px green; }
+            66% { box-shadow: 0 0 0 3px blue; }
+            100% { box-shadow: 0 0 0 3px red; }
+        }
+        #pokemon-image {
+            max-width: 200px;
+            height: auto;
+            display: block;
+            margin: 0 auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="logo">Pokemon Land</h1>
+        <div class="search-container">
+            <input type="text" id="search-input" placeholder="Enter first letter">
+            <button id="search-button">Find Pokemon</button>
+        </div>
+        <div id="result"></div>
+    </div>
+
+    <script>
+        const searchButton = document.getElementById('search-button');
+        const searchInput = document.getElementById('search-input');
+        const resultDiv = document.getElementById('result');
+
+        searchButton.addEventListener('click', searchPokemon);
+
+        async function searchPokemon() {
+            const letter = searchInput.value.trim().toLowerCase();
+            if (letter.length !== 1) {
+                alert('Please enter a single letter');
+                return;
+            }
+
+            try {
+                const response = await fetch(`https://pokeapi.co/api/v2/pokemon?limit=1000`);
+                const data = await response.json();
+                const pokemonList = data.results.filter(pokemon => pokemon.name.startsWith(letter));
+
+                if (pokemonList.length === 0) {
+                    resultDiv.innerHTML = 'No Pokemon found with that letter.';
+                    return;
+                }
+
+                const randomPokemon = pokemonList[Math.floor(Math.random() * pokemonList.length)];
+                const pokemonResponse = await fetch(randomPokemon.url);
+                const pokemonData = await pokemonResponse.json();
+
+                const speciesResponse = await fetch(pokemonData.species.url);
+                const speciesData = await speciesResponse.json();
+
+                const englishFlavorText = speciesData.flavor_text_entries.find(entry => entry.language.name === 'en');
+
+                let html = `
+                    <h2>${pokemonData.name.charAt(0).toUpperCase() + pokemonData.name.slice(1)}</h2>
+                    <img id="pokemon-image" src="${pokemonData.sprites.front_default}" alt="${pokemonData.name}">
+                    <p><strong>Height:</strong> ${pokemonData.height / 10} m</p>
+                    <p><strong>Weight:</strong> ${pokemonData.weight / 10} kg</p>
+                    <p><strong>Types:</strong> ${pokemonData.types.map(type => type.type.name).join(', ')}</p>
+                    <p><strong>Abilities:</strong> ${pokemonData.abilities.map(ability => ability.ability.name).join(', ')}</p>
+                `;
+
+                if (englishFlavorText) {
+                    html += `<p><strong>Description:</strong> ${englishFlavorText.flavor_text}</p>`;
+                }
+
+                resultDiv.innerHTML = html;
+            } catch (error) {
+                console.error('Error:', error);
+                resultDiv.innerHTML = 'An error occurred while fetching Pokemon data.';
+            }
+        }
+    </script>
+</body>
+</html>
